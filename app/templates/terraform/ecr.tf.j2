@@ -1,0 +1,19 @@
+resource "aws_ecr_repository" "{{ service_name | replace('-', '_') }}" {
+  name                 = "{{ service_name }}"
+  image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "KMS"
+  }
+
+  tags = {
+    Service     = "{{ service_name }}"
+    Owner       = "{{ owner }}"
+    Environment = "{{ environment }}"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}

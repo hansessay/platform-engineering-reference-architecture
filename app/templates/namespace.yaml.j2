@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ environment }}-{{ owner }}
+  labels:
+    owner: {{ owner }}
+    environment: {{ environment }}
+    platform.doktor.se/managed: "true"

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ service_name }}
+  namespace: {{ target_namespace }}
+  labels:
+    app: {{ service_name }}
+    owner: {{ owner }}
+    ai-enabled: "{{ needs_ai }}"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{ service_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ service_name }}
+    spec:
+      serviceAccountName: {{ service_name }}-sa
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: {{ service_name }}
+          image: "{{ aws_account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/{{ service_name }}:{{ environment }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+{% if persistent_storage %}
+          volumeMounts:
+            - name: application-data
+              mountPath: {{ mount_path }}
+{% endif %}
+{% if persistent_storage %}
+      volumes:
+        - name: application-data
+          persistentVolumeClaim:
+            claimName: {{ service_name }}-data
+{% endif %}

@@ -1,0 +1,46 @@
+name: Build and Deploy {{ service_name }}
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  SERVICE_NAME: {{ service_name }}
+  AWS_REGION: {{ aws_region }}
+  AWS_ACCOUNT_ID: {{ aws_account_id }}
+  ECR_REPOSITORY: {{ service_name }}
+  IMAGE_TAG: {% raw %}${{ github.sha }}{% endraw %}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          echo "Running tests for {{ service_name }}"
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::{{ aws_account_id }}:role/{{ service_name }}-github-actions-role
+          aws-region: {{ aws_region }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG

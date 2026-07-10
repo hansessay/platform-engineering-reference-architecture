@@ -1,0 +1,125 @@
+name: Terraform Drift Detection
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 6 * * *"
+
+  push:
+    paths:
+      - "terraform/**/*.tf"
+      - "terraform/**/*.tfvars"
+      - ".github/workflows/terraform-drift-detection.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift-detection:
+    name: Detect Terraform Drift
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: terraform/environments/dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform initialization
+        run: terraform init -input=false
+
+      - name: Terraform validation
+        run: terraform validate
+
+      - name: Detect infrastructure drift
+        id: plan
+        run: |
+          set +e
+
+          terraform plan \
+            -input=false \
+            -detailed-exitcode \
+            -out=tfplan
+
+          exit_code=$?
+
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+
+          if [ "$exit_code" -eq 1 ]; then
+            echo "Terraform plan failed."
+            exit 1
+          fi
+
+          if [ "$exit_code" -eq 2 ]; then
+            echo "Infrastructure drift or pending changes detected."
+            terraform show -no-color tfplan > drift-report.txt
+            exit 0
+          fi
+
+          echo "No infrastructure drift detected."
+
+      - name: Upload drift report
+        if: steps.plan.outputs.exit_code == '2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-drift-report
+          path: terraform/environments/dev/drift-report.txt
+          retention-days: 14
+
+      - name: Create GitHub issue
+        if: steps.plan.outputs.exit_code == '2'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = "Terraform drift detected in dev";
+
+            const body = [
+              "## Terraform drift detected",
+              "",
+              "Terraform found a difference between the declared configuration and the current infrastructure.",
+              "",
+              `Workflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              "",
+              "Download the `terraform-drift-report` artifact from the workflow run.",
+              "",
+              "### Required action",
+              "",
+              "1. Review the Terraform plan.",
+              "2. Determine whether the manual infrastructure change was authorized.",
+              "3. Either update the Terraform code or restore the infrastructure using Terraform.",
+              "",
+              "> This workflow intentionally does not run `terraform apply`."
+            ].join("\n");
+
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "terraform-drift"
+            });
+
+            if (existingIssues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["terraform-drift"]
+              });
+            } else {
+              core.info("An open Terraform drift issue already exists.");
+            }

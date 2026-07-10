@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-platform-labels
+  labels:
+    managed-by: platform-engineering-reference-architecture
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-required-labels
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - Service
+                - ConfigMap
+              namespaces:
+                - {{ environment }}-{{ owner }}
+      validate:
+        message: Resources must contain app, owner, and environment labels.
+        pattern:
+          metadata:
+            labels:
+              app: "?*"
+              owner: "?*"
+              environment: "?*"

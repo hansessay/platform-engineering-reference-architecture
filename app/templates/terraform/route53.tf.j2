@@ -1,0 +1,8 @@
+resource "aws_route53_zone" "platform" {
+  name = "{{ environment }}.platform.example.com"
+
+  tags = {
+    Environment = "{{ environment }}"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}

@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ service_name }}
+  namespace: {{ environment }}-{{ owner }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: {{ service_name }}.{{ environment }}.platform.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ service_name }}
+                port:
+                  number: 80

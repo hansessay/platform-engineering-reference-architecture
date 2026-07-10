@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ service_name }}
+  namespace: {{ target_namespace }}
+  labels:
+    app.kubernetes.io/name: {{ service_name }}
+    app.kubernetes.io/managed-by: platform-generator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ service_name }}
+  namespaceSelector:
+    matchNames:
+      - {{ target_namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

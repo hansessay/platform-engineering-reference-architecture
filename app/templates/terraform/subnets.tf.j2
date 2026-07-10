@@ -1,0 +1,21 @@
+resource "aws_subnet" "private_a" {
+  vpc_id            = aws_vpc.platform.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "{{ aws_region }}a"
+
+  tags = {
+    Name = "{{ environment }}-private-a"
+    Type = "private"
+  }
+}
+
+resource "aws_subnet" "private_b" {
+  vpc_id            = aws_vpc.platform.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "{{ aws_region }}b"
+
+  tags = {
+    Name = "{{ environment }}-private-b"
+    Type = "private"
+  }
+}

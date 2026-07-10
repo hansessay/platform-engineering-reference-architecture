@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+
+metadata:
+  name: {{ service_name }}-alerts
+  namespace: {{ environment }}-{{ owner }}
+
+  labels:
+    app: {{ service_name }}
+    owner: {{ owner }}
+    environment: {{ environment }}
+    managed-by: platform-engineering-reference-architecture
+
+spec:
+  groups:
+    - name: {{ service_name }}.rules
+
+      rules:
+
+        - alert: HighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{pod=~"{{ service_name }}.*"}[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: High CPU usage detected
+            description: CPU usage is above 80% for {{ service_name }}
+
+        - alert: HighMemoryUsage
+          expr: container_memory_usage_bytes{pod=~"{{ service_name }}.*"} > 500000000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: High memory usage detected
+            description: Memory usage exceeded 500 MB.
+
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{pod=~"{{ service_name }}.*"}[10m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Pod CrashLoopBackOff
+            description: {{ service_name }} has restarted multiple times.
+
+        - alert: PodUnavailable
+          expr: kube_deployment_status_replicas_unavailable{deployment="{{ service_name }}"} > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Deployment unavailable
+            description: One or more replicas are unavailable.

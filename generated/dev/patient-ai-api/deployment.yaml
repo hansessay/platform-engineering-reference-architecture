@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patient-ai-api
+  namespace: dev-healthcare
+  labels:
+    app: patient-ai-api
+    owner: healthcare
+    ai-enabled: "True"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: patient-ai-api
+  template:
+    metadata:
+      labels:
+        app: patient-ai-api
+    spec:
+      serviceAccountName: patient-ai-api-sa
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: patient-ai-api
+          image: "123456789012.dkr.ecr.eu-north-1.amazonaws.com/patient-ai-api:dev"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+          volumeMounts:
+            - name: application-data
+              mountPath: /data
+      volumes:
+        - name: application-data
+          persistentVolumeClaim:
+            claimName: patient-ai-api-data
