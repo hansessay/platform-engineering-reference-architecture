@@ -5,7 +5,7 @@ resource "aws_kms_key" "eks" {
 
   tags = {
     Environment = "dev"
-    Owner       = "healthcare-platform"
+    Owner       = "healthcare"
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }

@@ -7,6 +7,9 @@ resource "aws_eks_cluster" "dev_platform_cluster" {
       aws_subnet.private_a.id,
       aws_subnet.private_b.id
     ]
+
+    endpoint_private_access = true
+    endpoint_public_access  = false
   }
 
   encryption_config {
@@ -17,9 +20,21 @@ resource "aws_eks_cluster" "dev_platform_cluster" {
     resources = ["secrets"]
   }
 
+  enabled_cluster_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler"
+  ]
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_policy
+  ]
+
   tags = {
     Environment = "dev"
-    Owner       = "healthcare-platform"
+    Owner       = "healthcare"
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }
@@ -40,10 +55,23 @@ resource "aws_eks_node_group" "dev_platform_nodes" {
     max_size     = 5
   }
 
+  update_config {
+    max_unavailable = 1
+  }
+
   instance_types = ["t3.medium"]
+  capacity_type  = "ON_DEMAND"
+  disk_size      = 50
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_worker_node_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_iam_role_policy_attachment.ecr_readonly_policy
+  ]
 
   tags = {
     Environment = "dev"
+    Owner       = "healthcare"
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }

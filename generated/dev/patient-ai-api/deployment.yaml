@@ -48,10 +48,3 @@ spec:
             httpGet:
               path: /health
               port: 8000
-          volumeMounts:
-            - name: application-data
-              mountPath: /data
-      volumes:
-        - name: application-data
-          persistentVolumeClaim:
-            claimName: patient-ai-api-data

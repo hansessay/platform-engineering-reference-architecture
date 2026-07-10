@@ -12,7 +12,7 @@ resource "aws_ecr_repository" "patient_ai_api" {
 
   tags = {
     Service     = "patient-ai-api"
-    Owner       = "healthcare-platform"
+    Owner       = "healthcare"
     Environment = "dev"
     ManagedBy   = "platform-engineering-reference-architecture"
   }
