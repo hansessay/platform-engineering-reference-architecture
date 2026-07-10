@@ -1,0 +1,84 @@
+ 
+name: Platform CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-validation:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Find and validate Terraform directories
+        shell: bash
+        run: |
+          set -e
+
+          mapfile -t directories < <(
+            find . -type f -name "*.tf" \
+              -not -path "*/.terraform/*" \
+              -exec dirname {} \; | sort -u
+          )
+
+          if [ "${#directories[@]}" -eq 0 ]; then
+            echo "No Terraform directories found."
+            exit 0
+          fi
+
+          for directory in "${directories[@]}"; do
+            echo "Validating ${directory}"
+
+            terraform -chdir="${directory}" init \
+              -backend=false \
+              -input=false
+
+            terraform -chdir="${directory}" validate
+          done
+
+  terraform-security:
+    name: Terraform Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          quiet: true
+          soft_fail: false
+
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
