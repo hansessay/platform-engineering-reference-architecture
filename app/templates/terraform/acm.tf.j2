@@ -2,6 +2,10 @@ resource "aws_acm_certificate" "platform" {
   domain_name       = "*.{{ environment }}.platform.example.com"
   validation_method = "DNS"
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Environment = "{{ environment }}"
     ManagedBy   = "platform-engineering-reference-architecture"
