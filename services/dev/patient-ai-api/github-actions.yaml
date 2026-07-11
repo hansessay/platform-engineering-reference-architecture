@@ -1,0 +1,46 @@
+name: Build and Deploy patient-ai-api
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  SERVICE_NAME: patient-ai-api
+  AWS_REGION: eu-north-1
+  AWS_ACCOUNT_ID: 123456789012
+  ECR_REPOSITORY: patient-ai-api
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        run: |
+          echo "Running tests for patient-ai-api"
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/patient-ai-api-github-actions-role
+          aws-region: eu-north-1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
