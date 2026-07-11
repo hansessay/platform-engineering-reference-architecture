@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+
+metadata:
+  name: patient-ai-api-alerts
+  namespace: dev-healthcare
+
+  labels:
+    app: patient-ai-api
+    owner: healthcare
+    environment: dev
+    managed-by: platform-engineering-reference-architecture
+
+spec:
+  groups:
+    - name: patient-ai-api.rules
+
+      rules:
+
+        - alert: HighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{pod=~"patient-ai-api.*"}[5m]) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: High CPU usage detected
+            description: CPU usage is above 80% for patient-ai-api
+
+        - alert: HighMemoryUsage
+          expr: container_memory_usage_bytes{pod=~"patient-ai-api.*"} > 500000000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: High memory usage detected
+            description: Memory usage exceeded 500 MB.
+
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{pod=~"patient-ai-api.*"}[10m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Pod CrashLoopBackOff
+            description: patient-ai-api has restarted multiple times.
+
+        - alert: PodUnavailable
+          expr: kube_deployment_status_replicas_unavailable{deployment="patient-ai-api"} > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Deployment unavailable
+            description: One or more replicas are unavailable.
