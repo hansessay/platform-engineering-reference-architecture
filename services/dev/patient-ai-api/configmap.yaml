@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: patient-ai-api-config
+  namespace: dev-healthcare
+data:
+  APP_ENV: "dev"
+  SERVICE_NAME: "patient-ai-api"
+  AI_ENABLED: "True"
