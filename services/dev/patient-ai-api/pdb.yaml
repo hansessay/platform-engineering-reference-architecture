@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: patient-ai-api
+  namespace: dev-healthcare
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: patient-ai-api
