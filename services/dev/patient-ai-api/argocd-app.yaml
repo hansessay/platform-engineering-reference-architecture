@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: patient-ai-api
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/hansessay/ai-platform-engineering-idp
+    targetRevision: main
+    path: generated/dev/patient-ai-api
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev-healthcare
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
