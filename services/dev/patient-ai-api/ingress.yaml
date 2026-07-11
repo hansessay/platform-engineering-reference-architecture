@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: patient-ai-api
+  namespace: dev-healthcare
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: patient-ai-api.dev.platform.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: patient-ai-api
+                port:
+                  number: 80
