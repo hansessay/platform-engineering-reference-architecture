@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: patient-ai-api-data
+  namespace: dev-healthcare
+  labels:
+    app.kubernetes.io/name: patient-ai-api
+    app.kubernetes.io/part-of: healthcare
+    app.kubernetes.io/managed-by: platform-generator
+    platform.storage/type: block
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rook-ceph-block
+  resources:
+    requests:
+      storage: 20Gi
