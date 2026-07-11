@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: patient-ai-api
+  namespace: dev-healthcare
+  labels:
+    app.kubernetes.io/name: patient-ai-api
+    app.kubernetes.io/managed-by: platform-generator
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-ai-api
+  namespaceSelector:
+    matchNames:
+      - dev-healthcare
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
