@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+
+metadata:
+  name: patient-ai-api-alertmanager-config
+  namespace: dev-healthcare
+
+  labels:
+    app: patient-ai-api
+    owner: healthcare
+    environment: dev
+    managed-by: platform-engineering-reference-architecture
+
+spec:
+  route:
+    groupBy:
+      - alertname
+      - service
+      - severity
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    receiver: patient-ai-api-default-receiver
+
+  receivers:
+    - name: patient-ai-api-default-receiver
+      webhookConfigs:
+        - url:
+            key: webhook-url
+            name: patient-ai-api-alert-webhook
+          sendResolved: true
