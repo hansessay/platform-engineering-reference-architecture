@@ -23,6 +23,7 @@ TERRAFORM_TEMPLATES = [
     "terraform/route53.tf.j2",
     "terraform/external-dns.tf.j2",
     "terraform/eks.tf.j2",
+    "terraform/providers.tf.j2",
 ]
 
 

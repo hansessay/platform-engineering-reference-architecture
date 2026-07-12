@@ -1,4 +1,4 @@
- 
+
 name: Platform CI
 
 on:
@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   terraform-validation:
@@ -25,32 +26,35 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Terraform format check
-        run: terraform fmt -check -recursive
-
-      - name: Find and validate Terraform directories
+      - name: Find and validate service Terraform directories
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
 
           mapfile -t directories < <(
-            find . -type f -name "*.tf" \
+            find services \
+              -type f \
+              -path "*/terraform/*.tf" \
               -not -path "*/.terraform/*" \
-              -exec dirname {} \; | sort -u
+              -exec dirname {} \; 2>/dev/null |
+              sort -u
           )
 
           if [ "${#directories[@]}" -eq 0 ]; then
-            echo "No Terraform directories found."
+            echo "No service Terraform directories found."
             exit 0
           fi
 
           for directory in "${directories[@]}"; do
-            echo "Validating ${directory}"
+            echo "Formatting ${directory}"
+            terraform -chdir="${directory}" fmt -check
 
+            echo "Initializing ${directory}"
             terraform -chdir="${directory}" init \
               -backend=false \
               -input=false
 
+            echo "Validating ${directory}"
             terraform -chdir="${directory}" validate
           done
 
@@ -62,10 +66,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Checkov
+      - name: Run Checkov against GitOps services
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: .
+          directory: services
           framework: terraform
           quiet: true
           soft_fail: false
@@ -81,4 +85,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,13 +1,21 @@
+{% if domain_name %}
 resource "aws_acm_certificate" "platform" {
-  domain_name       = "*.{{ environment }}.platform.example.com"
+  domain_name       = "{{ service_name }}.{{ domain_name | trim('.') }}"
   validation_method = "DNS"
+
+  options {
+    certificate_transparency_logging_preference = "ENABLED"
+  }
 
   lifecycle {
     create_before_destroy = true
   }
 
   tags = {
+    Name        = "{{ service_name }}-{{ environment }}-certificate"
     Environment = "{{ environment }}"
+    Owner       = "{{ owner }}"
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }
+{% endif %}
