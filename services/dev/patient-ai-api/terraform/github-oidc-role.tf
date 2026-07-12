@@ -46,9 +46,9 @@ resource "aws_iam_role_policy" "patient_ai_api_ecr_push_policy" {
     Statement = [
 
       {
-        Sid      = "ECRAuthentication"
-        Effect   = "Allow"
-        Action   = [
+        Sid    = "ECRAuthentication"
+        Effect = "Allow"
+        Action = [
           "ecr:GetAuthorizationToken"
         ]
         Resource = "*"
