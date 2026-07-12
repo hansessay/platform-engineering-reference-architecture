@@ -1,5 +1,8 @@
+{% set clean_domain = domain_name | default("", true) | trim | trim(".") %}
+{% if clean_domain %}
+
 resource "aws_route53_zone" "platform" {
-  name = "{{ domain_name }}"
+  name = "{{ clean_domain }}"
 
   tags = {
     Name        = "{{ environment }}-platform-hosted-zone"
@@ -281,3 +284,5 @@ resource "aws_route53_query_log" "platform" {
     aws_cloudwatch_log_resource_policy.route53_query_logs
   ]
 }
+
+{% endif %}

@@ -1,5 +1,6 @@
+{% if domain_name %}
 resource "aws_acm_certificate" "platform" {
-  domain_name       = "{{ service_name }}.{{ domain_name }}"
+  domain_name       = "{{ service_name }}.{{ domain_name | trim('.') }}"
   validation_method = "DNS"
 
   options {
@@ -17,3 +18,4 @@ resource "aws_acm_certificate" "platform" {
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }
+{% endif %}

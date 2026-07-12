@@ -64,7 +64,7 @@ data "aws_iam_policy_document" "vpc_flow_logs_kms" {
       type = "Service"
 
       identifiers = [
-        "logs.${data.aws_region.vpc_flow_logs_current.name}.amazonaws.com"
+        "logs.${data.aws_region.vpc_flow_logs_current.region}.amazonaws.com"
       ]
     }
 
@@ -85,7 +85,7 @@ data "aws_iam_policy_document" "vpc_flow_logs_kms" {
       variable = "kms:EncryptionContext:aws:logs:arn"
 
       values = [
-        "arn:aws:logs:${data.aws_region.vpc_flow_logs_current.name}:${data.aws_caller_identity.vpc_flow_logs_current.account_id}:log-group:/aws/vpc/dev-platform-flow-logs"
+        "arn:aws:logs:${data.aws_region.vpc_flow_logs_current.region}:${data.aws_caller_identity.vpc_flow_logs_current.account_id}:log-group:/aws/vpc/dev-platform-flow-logs"
       ]
     }
   }
@@ -198,3 +198,4 @@ resource "aws_flow_log" "platform" {
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }
+
