@@ -1,13 +1,13 @@
-name: Build and Deploy {{ service_name }}
+name: Validate and Deploy {{ service_name }}
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
-permissions:
-  id-token: write
-  contents: read
+  push:
+    branches:
+      - main
 
 env:
   SERVICE_NAME: {{ service_name }}
@@ -17,19 +17,54 @@ env:
   IMAGE_TAG: {% raw %}${{ github.sha }}{% endraw %}
 
 jobs:
-  build:
+  security-validation:
+    name: Security and configuration validation
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Install Checkov
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install checkov
+
+      - name: Run Checkov security scan
+        run: |
+          checkov \
+            --directory . \
+            --framework terraform kubernetes \
+            --compact \
+            --quiet
 
       - name: Run tests
         run: |
           echo "Running tests for {{ service_name }}"
 
+  build-and-push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    needs:
+      - security-validation
+
+    # Never publish images from pull requests.
+    # Only publish after code is merged or pushed to main.
+    if: {% raw %}${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}{% endraw %}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
       - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::{{ aws_account_id }}:role/{{ service_name }}-github-actions-role
           aws-region: {{ aws_region }}
@@ -39,8 +74,11 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build \
+            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG \
+            .
 
       - name: Push Docker image to ECR
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG

@@ -8,6 +8,10 @@ resource "aws_eks_cluster" "dev_platform_cluster" {
       aws_subnet.private_b.id
     ]
 
+    security_group_ids = [
+      aws_security_group.eks_cluster.id
+    ]
+
     endpoint_private_access = true
     endpoint_public_access  = false
   }
@@ -17,7 +21,9 @@ resource "aws_eks_cluster" "dev_platform_cluster" {
       key_arn = aws_kms_key.eks.arn
     }
 
-    resources = ["secrets"]
+    resources = [
+      "secrets"
+    ]
   }
 
   enabled_cluster_log_types = [
@@ -33,6 +39,7 @@ resource "aws_eks_cluster" "dev_platform_cluster" {
   ]
 
   tags = {
+    Name        = "dev-platform-eks"
     Environment = "dev"
     Owner       = "healthcare"
     ManagedBy   = "platform-engineering-reference-architecture"
@@ -59,9 +66,12 @@ resource "aws_eks_node_group" "dev_platform_nodes" {
     max_unavailable = 1
   }
 
-  instance_types = ["t3.medium"]
-  capacity_type  = "ON_DEMAND"
-  disk_size      = 50
+  instance_types = [
+    "t3.medium"
+  ]
+
+  capacity_type = "ON_DEMAND"
+  disk_size     = 50
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,
@@ -70,6 +80,7 @@ resource "aws_eks_node_group" "dev_platform_nodes" {
   ]
 
   tags = {
+    Name        = "dev-platform-nodes"
     Environment = "dev"
     Owner       = "healthcare"
     ManagedBy   = "platform-engineering-reference-architecture"

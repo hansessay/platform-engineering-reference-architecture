@@ -7,6 +7,10 @@ metadata:
     app: {{ service_name }}
     owner: {{ owner }}
     ai-enabled: "{{ needs_ai }}"
+  annotations:
+    checkov.io/skip1: >-
+      CKV_K8S_43=Image digest will be injected by the deployment
+      promotion pipeline after the image is published to ECR.
 spec:
   replicas: 2
   selector:
@@ -16,23 +20,41 @@ spec:
     metadata:
       labels:
         app: {{ service_name }}
+        owner: {{ owner }}
+        ai-enabled: "{{ needs_ai }}"
     spec:
       serviceAccountName: {{ service_name }}-sa
+      automountServiceAccountToken: false
+
       securityContext:
         runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: {{ service_name }}
           image: "{{ aws_account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/{{ service_name }}:{{ environment }}"
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
+
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
           securityContext:
             allowPrivilegeEscalation: false
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
             capabilities:
               drop:
                 - ALL
+
           resources:
             requests:
               cpu: "250m"
@@ -40,19 +62,31 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+
           readinessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
           livenessProbe:
             httpGet:
               path: /health
-              port: 8000
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
 {% if persistent_storage %}
           volumeMounts:
             - name: application-data
               mountPath: {{ mount_path }}
 {% endif %}
+
 {% if persistent_storage %}
       volumes:
         - name: application-data
