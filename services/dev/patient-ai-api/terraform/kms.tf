@@ -1,0 +1,75 @@
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "eks_kms" {
+
+  # checkov:skip=CKV_AWS_109:KMS key administration is restricted to the root principal of the current AWS account
+  # checkov:skip=CKV_AWS_111:KMS write permissions are restricted to the root principal of the current AWS account
+  # checkov:skip=CKV_AWS_356:KMS key policies require Resource wildcard because the policy is attached directly to the key
+
+  statement {
+    sid    = "EnableRootAccountPermissions"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+
+    actions = [
+      "kms:*"
+    ]
+
+    resources = [
+      "*"
+    ]
+  }
+
+  statement {
+    sid    = "AllowEKSSecretsEncryption"
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+
+      identifiers = [
+        "eks.amazonaws.com"
+      ]
+    }
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:GenerateDataKey",
+      "kms:GenerateDataKeyWithoutPlaintext",
+      "kms:ReEncryptFrom",
+      "kms:ReEncryptTo"
+    ]
+
+    resources = [
+      "*"
+    ]
+  }
+}
+
+resource "aws_kms_key" "eks" {
+  description             = "KMS key for dev EKS secrets encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.eks_kms.json
+
+  tags = {
+    Name        = "dev-platform-eks-kms"
+    Environment = "dev"
+    Owner       = "healthcare"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}
+
+resource "aws_kms_alias" "eks" {
+  name          = "alias/dev-platform-eks"
+  target_key_id = aws_kms_key.eks.key_id
+}

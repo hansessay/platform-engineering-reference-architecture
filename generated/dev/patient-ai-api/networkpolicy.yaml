@@ -7,6 +7,25 @@ spec:
   podSelector:
     matchLabels:
       app: patient-ai-api
+
   policyTypes:
     - Ingress
     - Egress
+
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
+
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

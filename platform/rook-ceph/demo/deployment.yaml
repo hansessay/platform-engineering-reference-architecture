@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ceph-demo
+  labels:
+    kubernetes.io/metadata.name: ceph-demo
+    app.kubernetes.io/part-of: rook-ceph-demo
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ceph-block-pvc
+  namespace: ceph-demo
+  labels:
+    app.kubernetes.io/name: ceph-storage-demo
+    app.kubernetes.io/part-of: rook-ceph-demo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rook-ceph-block
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ceph-storage-demo
+  namespace: ceph-demo
+  annotations:
+    checkov.io/skip1: "CKV_K8S_43=Demo image digest will be injected by CI/CD after the image build"
+  labels:
+    app: ceph-storage-demo
+    app.kubernetes.io/name: ceph-storage-demo
+    app.kubernetes.io/part-of: rook-ceph-demo
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: ceph-storage-demo
+
+  template:
+    metadata:
+      labels:
+        app: ceph-storage-demo
+        app.kubernetes.io/name: ceph-storage-demo
+        app.kubernetes.io/part-of: rook-ceph-demo
+
+    spec:
+      automountServiceAccountToken: false
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: ceph-storage-demo
+          image: busybox:1.36
+          imagePullPolicy: Always
+
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Rook-Ceph storage is mounted" > /data/status.txt
+              touch /data/healthy
+              while true; do
+                date >> /data/status.txt
+                sleep 60
+              done
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            capabilities:
+              drop:
+                - ALL
+
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test -f /data/healthy
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - test -f /data/healthy
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          volumeMounts:
+            - name: ceph-storage
+              mountPath: /data
+
+      volumes:
+        - name: ceph-storage
+          persistentVolumeClaim:
+            claimName: ceph-block-pvc
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ceph-storage-demo
+  namespace: ceph-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: ceph-storage-demo
+
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress: []
+
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
