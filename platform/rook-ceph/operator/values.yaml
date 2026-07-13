@@ -1,0 +1,22 @@
+crds:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+monitoring:
+  enabled: true
+
+csi:
+  enableRbdDriver: true
+  enableCephfsDriver: true
+
+enableDiscoveryDaemon: true
+allowLoopDevices: true
+
+logLevel: INFO
