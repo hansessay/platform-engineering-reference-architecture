@@ -7,13 +7,19 @@ on:
       - feature/backstage-sre-idp
     paths:
       - "backstage/sre-platform-portal/**"
+      - ".github/workflows/backstage-ci.yml"
 
   pull_request:
     paths:
       - "backstage/sre-platform-portal/**"
+      - ".github/workflows/backstage-ci.yml"
+
+  # Allows us to manually run the pipeline from GitHub Actions
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build and Validate Backstage
     runs-on: ubuntu-latest
 
     defaults:
@@ -21,28 +27,49 @@ jobs:
         working-directory: backstage/sre-platform-portal
 
     steps:
-      - name: Checkout
+      # ---------------------------------------------------------
+      # 1. Checkout repository
+      # ---------------------------------------------------------
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      # ---------------------------------------------------------
+      # 2. Install Node.js
+      # ---------------------------------------------------------
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: yarn
           cache-dependency-path: backstage/sre-platform-portal/yarn.lock
 
+      # ---------------------------------------------------------
+      # 3. Enable Yarn through Corepack
+      # ---------------------------------------------------------
       - name: Enable Corepack
         run: corepack enable
 
+      # ---------------------------------------------------------
+      # 4. Install Backstage dependencies
+      # ---------------------------------------------------------
       - name: Install dependencies
         run: yarn install --immutable
 
+      # ---------------------------------------------------------
+      # 5. Validate Backstage configuration
+      # ---------------------------------------------------------
       - name: Validate Backstage configuration
         run: yarn backstage-cli config:check --lax
 
+      # ---------------------------------------------------------
+      # 6. Build Backstage backend
+      # ---------------------------------------------------------
       - name: Build Backstage
         run: yarn build:backend
 
+      # ---------------------------------------------------------
+      # 7. Build production Docker image
+      # ---------------------------------------------------------
       - name: Build Docker image
         run: |
           docker build \
