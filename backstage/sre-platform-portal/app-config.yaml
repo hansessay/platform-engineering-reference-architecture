@@ -1,0 +1,142 @@
+app:
+  title: SRE Platform IDP
+  baseUrl: http://localhost:3000
+
+# Enable all packages by default.
+packages: all
+
+extensions:
+  # Configure the catalog index page to be the root page.
+  - page:catalog:
+      config:
+        path: /
+
+organization:
+  name: SRE Platform Engineering
+
+backend:
+  # Used for enabling authentication between backend services.
+  # auth:
+  #   keys:
+  #     - secret: ${BACKEND_SECRET}
+
+  baseUrl: http://localhost:7007
+
+  listen:
+    port: 7007
+    # host: 127.0.0.1
+
+  csp:
+    connect-src:
+      - "'self'"
+      - "http:"
+      - "https:"
+
+  cors:
+    origin: http://localhost:3000
+    methods:
+      - GET
+      - HEAD
+      - PATCH
+      - POST
+      - PUT
+      - DELETE
+    credentials: true
+
+  # Development database only.
+  # Production PostgreSQL configuration is in app-config.production.yaml.
+  database:
+    client: better-sqlite3
+    connection: ":memory:"
+
+actions:
+  pluginSources:
+    - auth
+    - catalog
+    - scaffolder
+
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}
+
+proxy:
+  # Later we can proxy our FastAPI Platform API here.
+  #
+  # endpoints:
+  #   /platform-api:
+  #     target: http://localhost:8000
+  #     changeOrigin: true
+
+techdocs:
+  builder: local
+
+  generator:
+    runIn: docker
+
+  publisher:
+    type: local
+
+auth:
+  providers:
+    guest: {}
+
+  clientIdMetadataDocuments:
+    enabled: false
+
+scaffolder:
+  # Our custom platform:createService action
+  # will be connected to the FastAPI platform backend later.
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+
+  rules:
+    - allow:
+        - Component
+        - System
+        - API
+        - Resource
+        - Location
+
+  locations:
+    # Backstage example components
+    - type: file
+      target: ../../examples/entities.yaml
+
+    # Backstage example template
+    - type: file
+      target: ../../examples/template/template.yaml
+      rules:
+        - allow:
+            - Template
+
+    # Backstage example organization/users
+    - type: file
+      target: ../../examples/org.yaml
+      rules:
+        - allow:
+            - User
+            - Group
+
+    # OUR SRE PLATFORM GOLDEN PATH
+    - type: file
+      target: ../../templates/production-service/template.yaml
+      rules:
+        - allow:
+            - Template
+
+kubernetes:
+  # Kubernetes configuration comes later.
+  # This will eventually connect Backstage to our kind/EKS clusters.
+
+permission:
+  enabled: true
+
+mcpActions:
+  name: SRE Platform IDP
+  description: >
+    Internal Developer Platform for creating services,
+    managing infrastructure, SRE operations, and platform automation.

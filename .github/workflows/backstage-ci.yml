@@ -1,0 +1,49 @@
+name: Backstage CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backstage/sre-platform-portal/**"
+  pull_request:
+    paths:
+      - "backstage/sre-platform-portal/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backstage/sre-platform-portal
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: yarn
+          cache-dependency-path: backstage/sre-platform-portal/yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Validate Backstage configuration
+        run: yarn backstage-cli config:check --lax
+
+      - name: Build Backstage
+        run: yarn build:backend
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f packages/backend/Dockerfile \
+            -t sre-backstage:${{ github.sha }} \
+            .

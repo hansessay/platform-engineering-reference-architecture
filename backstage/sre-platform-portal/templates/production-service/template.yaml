@@ -1,0 +1,85 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+
+metadata:
+  name: production-service
+  title: Create Production Service
+  description: Provision a production-ready Kubernetes service through the SRE Platform
+
+spec:
+  owner: platform-team
+  type: service
+
+  parameters:
+    - title: Service Information
+      required:
+        - service_name
+        - owner
+        - environment
+      properties:
+        service_name:
+          title: Service Name
+          type: string
+        owner:
+          title: Owning Team
+          type: string
+          default: platform-team
+        environment:
+          title: Environment
+          type: string
+          default: dev
+          enum:
+            - dev
+            - staging
+            - production
+
+    - title: Runtime
+      properties:
+        language:
+          title: Language
+          type: string
+          default: python
+          enum:
+            - python
+            - nodejs
+            - java
+        replicas:
+          title: Replicas
+          type: integer
+          default: 2
+          minimum: 1
+          maximum: 10
+
+    - title: Reliability
+      properties:
+        slo:
+          title: Availability SLO
+          type: number
+          default: 99.9
+        latency_ms:
+          title: Maximum P95 Latency
+          type: integer
+          default: 500
+        observability:
+          title: Enable Observability
+          type: boolean
+          default: true
+
+  steps:
+    - id: provision
+      name: Provision service through platform API
+      action: platform:createService
+      input:
+        service_name: ${{ parameters.service_name }}
+        owner: ${{ parameters.owner }}
+        environment: ${{ parameters.environment }}
+        language: ${{ parameters.language }}
+        replicas: ${{ parameters.replicas }}
+        slo: ${{ parameters.slo }}
+        latency_ms: ${{ parameters.latency_ms }}
+        observability: ${{ parameters.observability }}
+
+  output:
+    text:
+      - title: Service requested
+        content: The SRE Platform accepted the service request.
