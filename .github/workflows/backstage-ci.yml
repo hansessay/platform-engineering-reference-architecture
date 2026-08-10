@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - main
+      - feature/backstage-sre-idp
     paths:
       - "backstage/sre-platform-portal/**"
+
   pull_request:
     paths:
       - "backstage/sre-platform-portal/**"
