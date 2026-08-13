@@ -6,44 +6,65 @@ import {
   SidebarScrollWrapper,
   SidebarSpace,
 } from '@backstage/core-components';
+
 import { NavContentBlueprint } from '@backstage/plugin-app-react';
 import { SidebarLogo } from './SidebarLogo';
+
 import MenuIcon from '@material-ui/icons/Menu';
 import SearchIcon from '@material-ui/icons/Search';
+
 import { SidebarSearchModal } from '@backstage/plugin-search';
 import { UserSettingsSignInAvatar } from '@backstage/plugin-user-settings';
-import { NotificationsSidebarItem } from '@backstage/plugin-notifications';
 
 export const SidebarContent = NavContentBlueprint.make({
   params: {
     component: ({ navItems }) => {
       const nav = navItems.withComponent(item => (
-        <SidebarItem icon={() => item.icon} to={item.href} text={item.title} />
+        <SidebarItem
+          icon={() => item.icon}
+          to={item.href}
+          text={item.title}
+        />
       ));
 
-      // Skipped items
-      nav.take('page:search'); // Using search modal instead
-      nav.take('page:notifications'); // Using NotificationsSidebarItem manually instead
+      // Search uses the custom search modal
+      nav.take('page:search');
+
+      // Notifications is NOT removed here.
+      // Let the Notifications frontend plugin expose its own page/nav item.
 
       return (
         <Sidebar>
           <SidebarLogo />
-          <SidebarGroup label="Search" icon={<SearchIcon />} to="/search">
+
+          <SidebarGroup
+            label="Search"
+            icon={<SearchIcon />}
+            to="/search"
+          >
             <SidebarSearchModal />
           </SidebarGroup>
+
           <SidebarDivider />
-          <SidebarGroup label="Menu" icon={<MenuIcon />}>
+
+          <SidebarGroup
+            label="Menu"
+            icon={<MenuIcon />}
+          >
             {nav.take('page:catalog')}
             {nav.take('page:scaffolder')}
+
             <SidebarDivider />
+
             <SidebarScrollWrapper>
               {nav.rest({ sortBy: 'title' })}
             </SidebarScrollWrapper>
           </SidebarGroup>
+
           <SidebarSpace />
+
           <SidebarDivider />
-          <NotificationsSidebarItem />
-          <SidebarDivider />
+
           <SidebarGroup
             label="Settings"
             icon={<UserSettingsSignInAvatar />}

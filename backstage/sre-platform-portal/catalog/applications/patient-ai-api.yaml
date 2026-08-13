@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+
+metadata:
+  name: patient-ai-api
+  description: Patient AI API service managed by the SRE Platform
+
+  annotations:
+    backstage.io/kubernetes-id: patient-ai-api
+
+spec:
+  type: service
+  lifecycle: development
+  owner: platform-team

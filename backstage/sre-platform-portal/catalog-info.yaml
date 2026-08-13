@@ -1,13 +1,24 @@
 apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: sre-platform-engineering
+  description: SRE and Platform Engineering Team
+spec:
+  type: team
+  profile:
+    displayName: SRE Platform Engineering
+  children: []
+
+---
+apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: sre-platform-portal
-  description: An example of a Backstage application.
-  # Example for optional annotations
-  # annotations:
-  #   github.com/project-slug: backstage/backstage
-  #   backstage.io/techdocs-ref: dir:.
+  name: sample-service
+  description: Sample service managed through the SRE Platform IDP
+  tags:
+    - sre
+    - platform-engineering
 spec:
-  type: website
-  owner: john@example.com
-  lifecycle: experimental
+  type: service
+  lifecycle: production
+  owner: group:sre-platform-engineering

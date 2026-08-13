@@ -1,0 +1,158 @@
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+
+  rules:
+    - allow:
+        - Component
+        - System
+        - API
+        - Resource
+        - Location
+        - User
+        - Group
+
+  locations:
+    # -------------------------------------------------------
+    # Backstage example users/groups
+    # Keep temporarily so owners can resolve
+    # -------------------------------------------------------
+    - type: file
+      target: ../../examples/org.yaml
+      rules:
+        - allow:
+            - User
+            - Group
+
+    # -------------------------------------------------------
+    # Network infrastructure
+    # -------------------------------------------------------
+    - type: file
+      target: ../../catalog/networking/core-switch-01.yaml
+      rules:
+        - allow:
+            - Resource
+
+    # -------------------------------------------------------
+    # Applications
+    # -------------------------------------------------------
+    - type: file
+      target: ../../catalog/applications/patient-ai-api.yaml
+      rules:
+        - allow:
+            - Component #     target: http://localhost:8000
+  #     changeOrigin: true
+
+techdocs:
+  builder: local
+
+  generator:
+    runIn: docker
+
+  publisher:
+    type: local
+
+auth:
+  providers:
+    guest: {}
+
+  clientIdMetadataDocuments:
+    enabled: false
+
+scaffolder:
+  # Our custom platform:createService action
+  # will be connected to the FastAPI backend later.
+
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+    pullRequestBranchName: backstage-integration
+
+  rules:
+    - allow:
+        - Component
+        - System
+        - API
+        - Resource
+        - Location
+
+  locations:
+    # -------------------------------------------------------
+    # Default Backstage examples
+    # -------------------------------------------------------
+
+    # Backstage example components
+    - type: file
+      target: ../../examples/entities.yaml
+
+    # Backstage example template
+    - type: file
+      target: ../../examples/template/template.yaml
+      rules:
+        - allow:
+            - Template
+
+    # Backstage example users/groups
+    - type: file
+      target: ../../examples/org.yaml
+      rules:
+        - allow:
+            - User
+            - Group
+
+    # -------------------------------------------------------
+    # SRE Platform templates
+    # -------------------------------------------------------
+
+    # Our SRE Platform golden path
+    - type: file
+      target: ../../templates/production-service/template.yaml
+      rules:
+        - allow:
+            - Template
+
+    # -------------------------------------------------------
+    # Application catalog
+    # -------------------------------------------------------
+
+    # Patient AI API
+    - type: file
+      target: ../../apps/patient-ai-api/catalog-info.yaml
+      rules:
+        - allow:
+            - Component
+
+    # -------------------------------------------------------
+    # Infrastructure / Network catalog
+    # -------------------------------------------------------
+
+    # Core Network Switch
+    - type: file
+      target: ../../catalog/core-switch-01.yaml
+      rules:
+        - allow:
+            - Resource
+
+kubernetes:
+  serviceLocatorMethod:
+    type: multiTenant
+
+  clusterLocatorMethods:
+    - type: config
+      clusters:
+        - name: sre-lab
+          url: https://host.docker.internal:6443
+          authProvider: serviceAccount
+          skipTLSVerify: true
+          serviceAccountToken: ${K8S_SERVICE_ACCOUNT_TOKEN}
+
+permission:
+  enabled: true
+
+mcpActions:
+  name: SRE Platform Backstage
+  description: >
+    Tools for managing the software catalog,
+    creating services from templates,
+    and operating the SRE platform.

@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+
+metadata:
+  name: core-switch-01
+  description: Core network switch
+  tags:
+    - network
+    - switch
+    - core
+
+spec:
+  type: network-switch
+  owner: platform-team
+  system: datacenter-network
