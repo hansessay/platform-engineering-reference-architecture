@@ -1,0 +1,80 @@
+name: Terraform Drift Detection
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  detect-drift:
+    name: Detect Terraform Drift
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: services/dev/patient-ai-api/terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-north-1
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.13.5"
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+
+      - name: Initialize Terraform
+        run: terraform init -input=false
+
+      - name: Validate Terraform
+        run: terraform validate
+
+      - name: Detect infrastructure drift
+        id: plan
+        continue-on-error: true
+        run: |
+          set +e
+          terraform plan \
+            -input=false \
+            -detailed-exitcode \
+            -out=tfplan
+
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ "$EXIT_CODE" -eq 1 ]; then
+            echo "Terraform plan failed."
+            exit 1
+          fi
+
+          exit 0
+
+      - name: Report no drift
+        if: steps.plan.outputs.exit_code == '0'
+        run: echo "No infrastructure drift detected."
+
+      - name: Report detected drift
+        if: steps.plan.outputs.exit_code == '2'
+        run: |
+          echo "::warning::Terraform infrastructure drift detected."
+          terraform show -no-color tfplan
+
+      - name: Fail workflow when drift is detected
+        if: steps.plan.outputs.exit_code == '2'
+        run: |
+          echo "Infrastructure differs from the Terraform configuration."
+          exit 1

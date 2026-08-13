@@ -1,12 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: patient-ai-api
   namespace: dev-healthcare
+
   annotations:
     checkov.io/skip1: "CKV_K8S_43=Image digest is injected by the CI/CD pipeline after the image build"
+
   labels:
     app: patient-ai-api
+    backstage.io/kubernetes-id: patient-ai-api
     owner: healthcare
     ai-enabled: "True"
 
@@ -21,6 +25,7 @@ spec:
     metadata:
       labels:
         app: patient-ai-api
+        backstage.io/kubernetes-id: patient-ai-api
 
     spec:
       serviceAccountName: patient-ai-api-sa
@@ -36,8 +41,12 @@ spec:
 
       containers:
         - name: patient-ai-api
-          image: "123456789012.dkr.ecr.eu-north-1.amazonaws.com/patient-ai-api:dev"
-          imagePullPolicy: Always
+
+          # Local image loaded directly into our Kind cluster.
+          # Production CI/CD will replace this with an immutable
+          # registry image/digest.
+          image: patient-ai-api:dev
+          imagePullPolicy: IfNotPresent
 
           ports:
             - name: http

@@ -1,3 +1,5 @@
+1data "aws_caller_identity" "current" {}
+
 resource "aws_security_group" "alb" {
   name        = "{{ environment }}-alb-sg"
   description = "Security group for the public application load balancer"
@@ -11,18 +13,234 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
- egress {
-  description = "Allow traffic from the ALB to application targets"
-  from_port   = 8000
-  to_port     = 8000
-  protocol    = "tcp"
-  cidr_blocks = [aws_vpc.platform.cidr_block]
-}
-}
+  egress {
+    description = "Allow traffic from the ALB to application targets"
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.platform.cidr_block]
+  }
 
   tags = {
     Name        = "{{ environment }}-alb-sg"
     Environment = "{{ environment }}"
+    Service     = "{{ service_name }}"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}
+
+resource "aws_s3_bucket" "alb_logs" {
+  bucket        = "{{ environment }}-{{ service_name | replace('_', '-') }}-alb-logs-${data.aws_caller_identity.current.account_id}"
+  force_destroy = false
+
+  tags = {
+    Name        = "{{ environment }}-{{ service_name | replace('_', '-') }}-alb-logs"
+    Environment = "{{ environment }}"
+    Service     = "{{ service_name }}"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}
+
+resource "aws_s3_bucket_ownership_controls" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  depends_on = [
+    aws_s3_bucket_versioning.alb_logs
+  ]
+
+  rule {
+    id     = "alb-log-retention"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    expiration {
+      days = 365
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "alb_logs" {
+  bucket = aws_s3_bucket.alb_logs.id
+
+  depends_on = [
+    aws_s3_bucket_ownership_controls.alb_logs,
+    aws_s3_bucket_public_access_block.alb_logs
+  ]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid    = "AllowALBLogDelivery"
+        Effect = "Allow"
+
+        Principal = {
+          Service = "logdelivery.elasticloadbalancing.amazonaws.com"
+        }
+
+        Action = "s3:PutObject"
+
+        Resource = "${aws_s3_bucket.alb_logs.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+      },
+      {
+        Sid    = "AllowALBLogDeliveryAclCheck"
+        Effect = "Allow"
+
+        Principal = {
+          Service = "logdelivery.elasticloadbalancing.amazonaws.com"
+        }
+
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.alb_logs.arn
+      },
+      {
+        Sid    = "DenyInsecureTransport"
+        Effect = "Deny"
+
+        Principal = "*"
+
+        Action = "s3:*"
+
+        Resource = [
+          aws_s3_bucket.alb_logs.arn,
+          "${aws_s3_bucket.alb_logs.arn}/*"
+        ]
+
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_lb" "platform" {
+  name               = "{{ environment }}-platform-alb"
+  internal           = false
+  load_balancer_type = "application"
+
+  security_groups = [
+    aws_security_group.alb.id
+  ]
+
+  subnets = [
+    aws_subnet.private_a.id,
+    aws_subnet.private_b.id
+  ]
+
+  enable_deletion_protection = true
+  drop_invalid_header_fields = true
+
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.id
+    prefix  = "platform-alb"
+    enabled = true
+  }
+
+  depends_on = [
+    aws_s3_bucket_policy.alb_logs
+  ]
+
+  tags = {
+    Name        = "{{ environment }}-platform-alb"
+    Environment = "{{ environment }}"
+    Service     = "{{ service_name }}"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}
+
+resource "aws_lb_target_group" "platform" {
+  name        = "{{ environment }}-platform-tg"
+  port        = 8000
+  protocol    = "HTTP"
+  target_type = "ip"
+  vpc_id      = aws_vpc.platform.id
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    interval            = 30
+    timeout             = 5
+    path                = "/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    matcher             = "200-399"
+  }
+
+  deregistration_delay = 30
+
+  tags = {
+    Name        = "{{ environment }}-platform-tg"
+    Environment = "{{ environment }}"
+    Service     = "{{ service_name }}"
+    ManagedBy   = "platform-engineering-reference-architecture"
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.platform.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = aws_acm_certificate.platform.arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.platform.arn
+  }
+
+  tags = {
+    Name        = "{{ environment }}-https-listener"
+    Environment = "{{ environment }}"
+    Service     = "{{ service_name }}"
     ManagedBy   = "platform-engineering-reference-architecture"
   }
 }

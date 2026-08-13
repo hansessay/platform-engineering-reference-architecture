@@ -1,17 +1,21 @@
 apiVersion: v1
 kind: Service
+
 metadata:
   name: patient-ai-api
-  namespace: <class 'jinja2.utils.Namespace'>
+  namespace: dev-healthcare
   labels:
-    app.kubernetes.io/name: patient-ai-api
-    app.kubernetes.io/managed-by: platform-generator
+    app: patient-ai-api
+    backstage.io/kubernetes-id: patient-ai-api
+
 spec:
   selector:
-    app.kubernetes.io/name: patient-ai-api
+    app: patient-ai-api
+
   ports:
     - name: http
       protocol: TCP
       port: 80
       targetPort: 8000
+
   type: ClusterIP

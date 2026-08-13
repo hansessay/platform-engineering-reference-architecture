@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backstage
+  namespace: backstage
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backstage
+
+  template:
+    metadata:
+      labels:
+        app: backstage
+
+    spec:
+      containers:
+        - name: backstage
+          image: ghcr.io/hansessay/sre-backstage:REPLACE_ME
+
+          ports:
+            - containerPort: 7007
+
+          env:
+            - name: POSTGRES_HOST
+              value: backstage-postgres
+
+            - name: POSTGRES_PORT
+              value: "5432"
+
+            - name: POSTGRES_USER
+              value: backstage
+
+            - name: POSTGRES_PASSWORD
+              value: backstage
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7007
+            initialDelaySeconds: 20
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7007
+            initialDelaySeconds: 30
+            periodSeconds: 20

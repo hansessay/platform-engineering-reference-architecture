@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+
+metadata:
+  name: patient-ai-api
+  title: Patient AI API
+  description: Patient AI API managed by the SRE Platform IDP
+
+  annotations:
+    backstage.io/kubernetes-id: patient-ai-api
+
+  tags:
+    - python
+    - fastapi
+    - kubernetes
+    - ai
+
+spec:
+  type: service
+  lifecycle: experimental
+  owner: platform-team
+  system: sre-platform

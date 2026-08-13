@@ -1,0 +1,15 @@
+.venv
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.terraform
+*.tfstate
+*.tfstate.*
+generated
+services
+platform
+checkov-result.json

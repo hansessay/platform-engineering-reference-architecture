@@ -1,76 +1,63 @@
-name: Backstage CI
-
-permissions:
-  contents: read
-  packages: write
+name: Promote Backstage
 
 on:
-  push:
-    branches:
-      - main
-      - "feature/**"
-      - "fix/**"
-    paths:
-      - "backstage/sre-platform-portal/**"
-      - ".github/workflows/backstage-ci.yml"
-
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "backstage/sre-platform-portal/**"
-      - ".github/workflows/backstage-ci.yml"
-
   workflow_dispatch:
+    inputs:
+      image_sha:
+        description: "Immutable image SHA to promote"
+        required: true
+        type: string
+
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: write
 
 jobs:
-  build:
-    name: Build and Validate Backstage
+  promote:
+    name: Promote Backstage
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: backstage/sre-platform-portal
+    environment: ${{ inputs.environment }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: yarn
-          cache-dependency-path: backstage/sre-platform-portal/yarn.lock
-
-      - name: Enable Corepack
-        run: corepack enable
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Validate Backstage configuration
-        run: yarn backstage-cli config:check --lax
-
-      - name: Build Backstage
-        run: yarn build:backend
-
-      - name: Build Docker image
+      - name: Validate environment
+        shell: bash
         run: |
-          docker build \
-            -f packages/backend/Dockerfile \
-            -t ghcr.io/${{ github.repository_owner }}/sre-backstage:${{ github.sha }} \
-            .
+          if [[ "${{ inputs.environment }}" != "staging" &&
+                "${{ inputs.environment }}" != "production" ]]; then
+            exit 1
+          fi
 
-      - name: Login to GHCR
-        if: github.event_name == 'push'
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push Docker image
-        if: github.event_name == 'push'
+      - name: Update GitOps image
+        shell: bash
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/sre-backstage:${{ github.sha }}
+          FILE="gitops/${{ inputs.environment }}/backstage/02-backstage-deployment.yaml"
+
+          sed -i \
+            "s|ghcr.io/hansessay/sre-backstage:.*|ghcr.io/hansessay/sre-backstage:${{ inputs.image_sha }}|" \
+            "$FILE"
+
+          cat "$FILE"
+
+      - name: Commit promotion
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add gitops/${{ inputs.environment }}/backstage
+
+          git commit \
+            -m "promote(backstage): ${{ inputs.image_sha }} to ${{ inputs.environment }}"
+
+          git push

@@ -2,11 +2,18 @@ from fastapi import FastAPI
 
 from app.models.service_request import ServiceRequest
 from app.orchestrator.platform_orchestrator import create_platform_service
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
     title="Platform Engineering Reference Architecture",
     version="1.0.0",
     description="Internal Developer Platform for self-service deployments",
+)
+
+Instrumentator().instrument(app).expose(
+    app,
+    endpoint="/metrics",
+    include_in_schema=False,
 )
 
 
