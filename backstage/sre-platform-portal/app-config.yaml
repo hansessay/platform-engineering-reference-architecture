@@ -95,6 +95,12 @@ catalog:
             - Group
 
     - type: file
+      target: ../../catalog/users/platform-team.yaml
+      rules:
+        - allow:
+            - Group
+
+    - type: file
       target: ../../catalog/networking/core-switch-01.yaml
       rules:
         - allow:
@@ -105,6 +111,30 @@ catalog:
       rules:
         - allow:
             - Component
+
+    - type: file
+      target: ../../catalog/applications/backup-api.yaml
+      rules:
+        - allow:
+            - Component
+
+    - type: file
+      target: ../../catalog/systems/backup-platform.yaml
+      rules:
+        - allow:
+            - System
+
+    - type: file
+      target: ../../catalog/kubernetes/k8s-prod-01.yaml
+      rules:
+        - allow:
+            - Resource
+
+    - type: file
+      target: ../../catalog/storage/ceph-prod-01.yaml
+      rules:
+        - allow:
+            - Resource
 
 kubernetes:
   serviceLocatorMethod:
