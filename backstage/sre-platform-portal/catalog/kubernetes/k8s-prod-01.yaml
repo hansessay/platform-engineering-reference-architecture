@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: k8s-prod-01
+  description: Production Kubernetes cluster
+spec:
+  type: kubernetes-cluster
+  owner: group:sre-platform-engineering
+  system: backup-platform

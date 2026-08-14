@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: backup-platform
+  description: Core backup platform managed through the SRE Platform IDP
+spec:
+  owner: group:sre-platform-engineering

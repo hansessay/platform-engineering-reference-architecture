@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: sre-platform-engineering
+  description: SRE and Platform Engineering team
+spec:
+  type: team
+  profile:
+    displayName: SRE Platform Engineering
+  children: []

@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: backup-api
+  description: Backup API service
+  tags:
+    - backup
+    - sre
+    - platform
+spec:
+  type: service
+  lifecycle: production
+  owner: group:sre-platform-engineering
+  system: backup-platform
+  dependsOn:
+    - resource:default/k8s-prod-01
+    - resource:default/ceph-prod-01
